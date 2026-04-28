@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Click Counter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: env(safe-area-inset-top, 24px) 24px env(safe-area-inset-bottom, 24px);
+            touch-action: manipulation;
+        }
+
+        #menuBtn {
+            position: fixed;
+            top: max(env(safe-area-inset-top, 16px), 16px);
+            left: 16px;
+            z-index: 30;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: rgba(248, 250, 252, 0.06);
+            border: 1px solid rgba(248, 250, 252, 0.12);
+            color: #f8fafc;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        #menuBtn:active {
+            transform: scale(0.92);
+            background: rgba(248, 250, 252, 0.14);
+        }
+
+        #tapArea {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .label {
+            position: absolute;
+            top: 32px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 14px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(248, 250, 252, 0.5);
+        }
+
+        #counter {
+            font-size: clamp(96px, 30vw, 220px);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            background: linear-gradient(180deg, #f8fafc 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            transition: transform 0.12s ease-out;
+            will-change: transform;
+        }
+
+        #counter.bump {
+            transform: scale(1.08);
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(99, 179, 237, 0.35);
+            transform: translate(-50%, -50%) scale(0);
+            pointer-events: none;
+            animation: ripple 0.55s ease-out forwards;
+            will-change: transform, opacity;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: translate(-50%, -50%) scale(8);
+                opacity: 0;
+            }
+        }
+
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.55);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            z-index: 40;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+        }
+
+        body.sidebar-open #overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: min(82vw, 320px);
+            background: linear-gradient(180deg, #111827 0%, #0b1220 100%);
+            border-right: 1px solid rgba(248, 250, 252, 0.08);
+            box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+            transform: translateX(-105%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            padding: max(env(safe-area-inset-top, 20px), 20px) 0 env(safe-area-inset-bottom, 20px);
+        }
+
+        body.sidebar-open #sidebar {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 8px 20px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(248, 250, 252, 0.06);
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        #closeBtn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: transparent;
+            border: none;
+            color: rgba(248, 250, 252, 0.6);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        #closeBtn:active {
+            background: rgba(248, 250, 252, 0.08);
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            padding: 12px 12px 0;
+            gap: 4px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 14px;
+            border-radius: 12px;
+            background: transparent;
+            border: none;
+            color: #e2e8f0;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s ease;
+        }
+
+        .nav-item:active {
+            background: rgba(248, 250, 252, 0.08);
+        }
+
+        .nav-item.active {
+            background: rgba(99, 179, 237, 0.12);
+            color: #93c5fd;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .history-section {
+            margin-top: 12px;
+            padding: 0 16px 16px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            flex: 1;
+        }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 4px 12px;
+        }
+
+        .history-title {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: rgba(248, 250, 252, 0.45);
+        }
+
+        #clearHistoryBtn {
+            background: transparent;
+            border: none;
+            color: rgba(248, 250, 252, 0.5);
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+        }
+
+        #clearHistoryBtn:active {
+            background: rgba(248, 250, 252, 0.08);
+            color: #f8fafc;
+        }
+
+        #historyList {
+            list-style: none;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 4px;
+            flex: 1;
+        }
+
+        #historyList::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #historyList::-webkit-scrollbar-thumb {
+            background: rgba(248, 250, 252, 0.12);
+            border-radius: 3px;
+        }
+
+        .history-item {
+            background: rgba(248, 250, 252, 0.04);
+            border: 1px solid rgba(248, 250, 252, 0.06);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .history-count {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f8fafc;
+            letter-spacing: -0.02em;
+        }
+
+        .history-time {
+            font-size: 11px;
+            color: rgba(248, 250, 252, 0.5);
+            text-align: right;
+            line-height: 1.4;
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 32px 16px;
+            color: rgba(248, 250, 252, 0.4);
+            font-size: 13px;
+        }
+
+        .history-section[hidden] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <button id="menuBtn" type="button" aria-label="Open menu">☰</button>
+
+    <div id="tapArea">
+        <div class="label">Taps</div>
+        <div id="counter">0</div>
+    </div>
+
+    <div id="overlay"></div>
+
+    <aside id="sidebar" aria-hidden="true">
+        <div class="sidebar-header">
+            <div class="sidebar-title">Menu</div>
+            <button id="closeBtn" type="button" aria-label="Close menu">✕</button>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="nav-item" id="navHistory" type="button">
+                <span class="nav-icon">🕘</span>
+                <span>History</span>
+            </button>
+            <button class="nav-item" id="navReset" type="button">
+                <span class="nav-icon">↺</span>
+                <span>Reset</span>
+            </button>
+        </nav>
+        <section class="history-section" id="historySection" hidden>
+            <div class="history-header">
+                <div class="history-title">Saved Counts</div>
+                <button id="clearHistoryBtn" type="button">Clear</button>
+            </div>
+            <ul id="historyList"></ul>
+        </section>
+    </aside>
+
+    <script>
+        (function () {
+            const STORAGE_KEY = 'tapCounter.history.v1';
+
+            const counterEl = document.getElementById('counter');
+            const tapArea = document.getElementById('tapArea');
+            const menuBtn = document.getElementById('menuBtn');
+            const closeBtn = document.getElementById('closeBtn');
+            const overlay = document.getElementById('overlay');
+            const sidebar = document.getElementById('sidebar');
+            const navHistory = document.getElementById('navHistory');
+            const navReset = document.getElementById('navReset');
+            const historySection = document.getElementById('historySection');
+            const historyList = document.getElementById('historyList');
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+            let count = 0;
+            let bumpTimer = null;
+            let history = loadHistory();
+
+            function render() { counterEl.textContent = count; }
+
+            function bump() {
+                counterEl.classList.remove('bump');
+                void counterEl.offsetWidth;
+                counterEl.classList.add('bump');
+                clearTimeout(bumpTimer);
+                bumpTimer = setTimeout(() => counterEl.classList.remove('bump'), 120);
+            }
+
+            function spawnRipple(x, y) {
+                const rect = tapArea.getBoundingClientRect();
+                const ripple = document.createElement('span');
+                ripple.className = 'ripple';
+                const size = 40;
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = (x - rect.left) + 'px';
+                ripple.style.top = (y - rect.top) + 'px';
+                tapArea.appendChild(ripple);
+                ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+            }
+
+            function handleTap(e) {
+                if (document.body.classList.contains('sidebar-open')) return;
+                if (e.target.closest('#menuBtn') || e.target.closest('#sidebar')) return;
+                e.preventDefault();
+                const point = e.changedTouches ? e.changedTouches[0] : e;
+                count++;
+                render();
+                bump();
+                spawnRipple(point.clientX, point.clientY);
+            }
+
+            if ('ontouchstart' in window) {
+                tapArea.addEventListener('touchstart', handleTap, { passive: false });
+            } else {
+                tapArea.addEventListener('pointerdown', handleTap);
+            }
+
+            function loadHistory() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (!raw) return [];
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (_) {
+                    return [];
+                }
+            }
+
+            function saveHistory() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+                } catch (_) { /* quota or disabled storage — ignore */ }
+            }
+
+            function formatTimestamp(ts) {
+                const d = new Date(ts);
+                const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                return { date, time };
+            }
+
+            function renderHistory() {
+                historyList.innerHTML = '';
+                if (!history.length) {
+                    const empty = document.createElement('li');
+                    empty.className = 'history-empty';
+                    empty.textContent = 'No saved counts yet.';
+                    historyList.appendChild(empty);
+                    return;
+                }
+                const frag = document.createDocumentFragment();
+                for (const entry of history) {
+                    const li = document.createElement('li');
+                    li.className = 'history-item';
+                    const { date, time } = formatTimestamp(entry.timestamp);
+                    li.innerHTML = `
+                        <span class="history-count">${entry.count}</span>
+                        <span class="history-time">${date}<br>${time}</span>
+                    `;
+                    frag.appendChild(li);
+                }
+                historyList.appendChild(frag);
+            }
+
+            function openSidebar() {
+                document.body.classList.add('sidebar-open');
+                sidebar.setAttribute('aria-hidden', 'false');
+            }
+
+            function closeSidebar() {
+                document.body.classList.remove('sidebar-open');
+                sidebar.setAttribute('aria-hidden', 'true');
+                historySection.hidden = true;
+                navHistory.classList.remove('active');
+            }
+
+            function toggleHistoryView() {
+                const showing = !historySection.hidden;
+                historySection.hidden = showing;
+                navHistory.classList.toggle('active', !showing);
+                if (!showing) renderHistory();
+            }
+
+            function resetCounter() {
+                if (count > 0) {
+                    history.unshift({ count, timestamp: Date.now() });
+                    saveHistory();
+                    if (!historySection.hidden) renderHistory();
+                }
+                count = 0;
+                render();
+                bump();
+            }
+
+            menuBtn.addEventListener('click', openSidebar);
+            closeBtn.addEventListener('click', closeSidebar);
+            overlay.addEventListener('click', closeSidebar);
+
+            navHistory.addEventListener('click', toggleHistoryView);
+            navReset.addEventListener('click', () => {
+                resetCounter();
+                closeSidebar();
+            });
+
+            clearHistoryBtn.addEventListener('click', () => {
+                history = [];
+                saveHistory();
+                renderHistory();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.body.classList.contains('sidebar-open')) closeSidebar();
+            });
+
+            render();
+        })();
+    </script>
+</body>
+
+</html>
