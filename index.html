@@ -314,6 +314,35 @@
             line-height: 1.4;
         }
 
+        .history-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-delete {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: transparent;
+            border: 1px solid rgba(248, 250, 252, 0.08);
+            color: rgba(248, 250, 252, 0.55);
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .history-delete:active {
+            background: rgba(248, 113, 113, 0.18);
+            border-color: rgba(248, 113, 113, 0.4);
+            color: #fecaca;
+        }
+
         .history-empty {
             text-align: center;
             padding: 32px 16px;
@@ -454,16 +483,19 @@
                     return;
                 }
                 const frag = document.createDocumentFragment();
-                for (const entry of history) {
+                history.forEach((entry, index) => {
                     const li = document.createElement('li');
                     li.className = 'history-item';
                     const { date, time } = formatTimestamp(entry.timestamp);
                     li.innerHTML = `
                         <span class="history-count">${entry.count}</span>
-                        <span class="history-time">${date}<br>${time}</span>
+                        <div class="history-meta">
+                            <span class="history-time">${date}<br>${time}</span>
+                            <button class="history-delete" type="button" data-index="${index}" aria-label="Delete entry">✕</button>
+                        </div>
                     `;
                     frag.appendChild(li);
-                }
+                });
                 historyList.appendChild(frag);
             }
 
@@ -509,6 +541,16 @@
 
             clearHistoryBtn.addEventListener('click', () => {
                 history = [];
+                saveHistory();
+                renderHistory();
+            });
+
+            historyList.addEventListener('click', (e) => {
+                const btn = e.target.closest('.history-delete');
+                if (!btn) return;
+                const index = Number(btn.dataset.index);
+                if (Number.isNaN(index) || index < 0 || index >= history.length) return;
+                history.splice(index, 1);
                 saveHistory();
                 renderHistory();
             });
